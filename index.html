@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>高中地理 · 宇宙中的地球 · 3D 互动课堂</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070b14'/%3E%3Ccircle cx='32' cy='32' r='14' fill='%23f6b93b'/%3E%3Ccircle cx='47' cy='22' r='5' fill='%235bc0eb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b14;
+    --panel:rgba(13,20,36,.88);
+    --line:rgba(120,180,255,.18);
+    --txt:#e8eef7;
+    --mut:#8fa3bd;
+    --acc:#6ec8ff;
+    --acc2:#ffd166;
+    --gold:#f6b93b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--txt);
+    font-family:'Noto Sans SC',system-ui,sans-serif;
+    overflow:hidden;user-select:none;
+  }
+  #scene3d{position:fixed;inset:0;display:block}
+  #scene3d canvas{display:block}
+  /* ===== 顶部栏 ===== */
+  #topbar{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;gap:14px;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(7,11,20,.85),transparent);
+    pointer-events:none;
+  }
+  #topbar>*{pointer-events:auto}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .mark{
+    width:40px;height:40px;border-radius:50%;flex:none;
+    background:radial-gradient(circle at 35% 35%,#ffe9a8,#f6b93b 55%,#b5761a);
+    box-shadow:0 0 18px rgba(246,185,59,.5);
+  }
+  .logo b{font-size:17px;font-weight:900;letter-spacing:1px;display:block}
+  .logo span{font-size:11px;color:var(--mut);letter-spacing:2px}
+  .modes{display:flex;gap:8px;flex-wrap:wrap}
+  .mode-btn{
+    padding:8px 16px;border-radius:100px;border:1px solid var(--line);
+    background:rgba(20,32,55,.6);color:var(--mut);font-size:13px;
+    font-family:inherit;cursor:pointer;transition:.25s;
+  }
+  .mode-btn:hover{color:var(--txt);border-color:rgba(110,200,255,.4)}
+  .mode-btn.on{
+    background:rgba(110,200,255,.16);color:var(--acc);
+    border-color:rgba(110,200,255,.45);
+    box-shadow:0 0 14px rgba(110,200,255,.18);
+  }
+  /* ===== 底部行星栏 ===== */
+  #planets{
+    position:fixed;bottom:0;left:0;right:0;z-index:40;
+    display:flex;justify-content:center;gap:10px;padding:14px 10px 18px;
+    background:linear-gradient(0deg,rgba(7,11,20,.9),transparent);
+    pointer-events:none;overflow-x:auto;
+  }
+  #planets>*{pointer-events:auto}
+  .pbtn{
+    flex:none;width:56px;text-align:center;cursor:pointer;
+    background:transparent;border:none;font-family:inherit;
+    transition:.2s;padding:4px;
+  }
+  .pbtn:hover{transform:translateY(-3px)}
+  .pbtn .dot{
+    width:26px;height:26px;border-radius:50%;margin:0 auto 5px;
+    border:1px solid rgba(255,255,255,.25);
+    box-shadow:inset -4px -4px 8px rgba(0,0,0,.5), 0 0 8px rgba(255,255,255,.08);
+  }
+  .pbtn span{font-size:11px;color:var(--mut);display:block;white-space:nowrap}
+  .pbtn:hover span{color:var(--txt)}
+  /* ===== 信息面板 ===== */
+  #panel{
+    position:fixed;right:18px;top:76px;z-index:45;width:min(360px,88vw);
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:22px;backdrop-filter:blur(10px);
+    box-shadow:0 18px 50px rgba(0,0,0,.5);
+    display:none;
+    max-height:calc(100vh - 200px);overflow-y:auto;
+  }
+  #panel.open{display:block;animation:slidein .35s cubic-bezier(.22,1,.36,1)}
+  @keyframes slidein{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+  #panel .close{
+    position:absolute;top:12px;right:14px;width:30px;height:30px;border-radius:8px;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);
+    color:var(--mut);cursor:pointer;font-size:15px;font-family:inherit;
+    display:grid;place-items:center;
+  }
+  #panel .close svg,#kb .close svg{width:14px;height:14px;stroke:currentColor}
+  #panel .close:hover{color:var(--txt)}
+  #panel h3{font-size:19px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+  #panel h3 .pdot{width:16px;height:16px;border-radius:50%;flex:none}
+  #panel .en{font-size:11px;color:var(--mut);letter-spacing:1px;margin-bottom:14px}
+  .stat{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:14px 0}
+  .stat div{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:9px 12px}
+  .stat b{display:block;font-size:13px}
+  .stat span{font-size:11px;color:var(--mut)}
+  #panel .desc{font-size:13px;line-height:1.8;color:#c6d4e6;margin-bottom:12px}
+  #panel .exam{
+    background:rgba(246,185,59,.07);border:1px solid rgba(246,185,59,.25);
+    border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.75;color:#ffe2a0;
+  }
+  #panel .exam b{color:var(--gold)}
+  /* ===== 底部提示 ===== */
+  #hint{
+    position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:35;
+    font-size:12.5px;color:var(--mut);background:rgba(10,16,30,.7);
+    border:1px solid var(--line);border-radius:100px;padding:8px 18px;
+    pointer-events:none;text-align:center;white-space:nowrap;
+  }
+  /* ===== 教学控制条（模式专用） ===== */
+  #teachbar{
+    position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:44;
+    display:none;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:12px 20px;max-width:92vw;
+  }
+  #teachbar.show{display:flex}
+  #teachbar .lbl{font-size:12.5px;color:var(--mut);white-space:nowrap}
+  #teachbar .lbl b{color:var(--acc)}
+  #teachbar input[type=range]{
+    width:150px;accent-color:var(--acc);height:4px;
+  }
+  #teachbar .btn{
+    padding:7px 15px;border-radius:100px;border:1px solid var(--line);
+    background:rgba(110,200,255,.12);color:var(--acc);font-size:12.5px;
+    font-family:inherit;cursor:pointer;transition:.2s;
+  }
+  #teachbar .btn:hover{background:rgba(110,200,255,.25)}
+  /* ===== 知识库 ===== */
+  #kb{
+    position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    background:rgba(4,7,14,.72);backdrop-filter:blur(6px);padding:20px;
+  }
+  #kb.open{display:flex}
+  #kb .box{
+    width:min(760px,94vw);max-height:86vh;overflow-y:auto;
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:28px;position:relative;
+  }
+  #kb .box .close{
+    position:absolute;top:14px;right:16px;width:32px;height:32px;border-radius:9px;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);
+    color:var(--mut);cursor:pointer;font-family:inherit;font-size:16px;
+    display:grid;place-items:center;
+  }
+  #kb .box .close:hover{color:var(--txt)}
+  #kb h2{font-size:21px;font-weight:900;margin-bottom:6px}
+  #kb .sub{font-size:12px;color:var(--mut);margin-bottom:20px}
+  .kcard{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;background:rgba(255,255,255,.03)}
+  .kcard h4{font-size:15px;color:var(--acc);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .kcard h4::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--acc);flex:none}
+  .kcard p{font-size:13px;line-height:1.9;color:#c6d4e6}
+  .kcard .tag{display:inline-block;font-size:10.5px;color:var(--gold);border:1px solid rgba(246,185,59,.3);border-radius:100px;padding:2px 9px;margin:6px 6px 0 0;background:rgba(246,185,59,.06)}
+  /* ===== 加载 ===== */
+  #loading{
+    position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;background:var(--bg);
+    transition:opacity .6s;pointer-events:none;
+  }
+  #loading.hide{opacity:0}
+  #loading .sunspin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(246,185,59,.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loading p{font-size:13px;color:var(--mut)}
+  @media (max-width:640px){
+    #topbar{padding:10px 14px}
+    .logo span{display:none}
+    .mode-btn{padding:7px 12px;font-size:12px}
+    #planets{gap:6px}
+    #panel{right:10px;top:64px;width:calc(100vw - 20px)}
+    #hint{bottom:72px;font-size:11px;white-space:normal;width:92vw;border-radius:12px}
+    #teachbar{bottom:76px;padding:10px 14px;gap:10px}
+    #teachbar input[type=range]{width:110px}
+  }
+</style>
+</head>
+<body>
+<canvas id="scene3d"></canvas>
+
+<div id="loading"><div class="sunspin"></div><p>正在加载宇宙……</p></div>
+
+<!-- 顶部栏 -->
+<div id="topbar">
+  <div class="logo">
+    <div class="mark"></div>
+    <div>
+      <b>宇宙中的地球</b>
+      <span>高中地理 · 必修一 · 3D 互动课堂</span>
+    </div>
+  </div>
+  <div class="modes">
+    <button class="mode-btn on" data-mode="free">太阳系漫游</button>
+    <button class="mode-btn" data-mode="rotate">地球自转 · 昼夜</button>
+    <button class="mode-btn" data-mode="revolution">地球公转 · 四季</button>
+    <button class="mode-btn" data-mode="timezone">时区与日界线</button>
+    <button class="mode-btn" data-mode="kb">知识库</button>
+  </div>
+</div>
+
+<!-- 教学控制条 -->
+<div id="teachbar">
+  <span class="lbl" id="tch-lbl"></span>
+  <input type="range" id="tch-slider" min="0" max="100" value="0">
+  <button class="btn" id="tch-play">播放</button>
+  <button class="btn" id="tch-reset">重置</button>
+</div>
+
+<!-- 底部行星栏 -->
+<div id="planets"></div>
+
+<!-- 信息面板 -->
+<div id="panel">
+  <button class="close" id="panel-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <h3 id="p-name"></h3>
+  <div class="en" id="p-en"></div>
+  <div class="stat" id="p-stat"></div>
+  <div class="desc" id="p-desc"></div>
+  <div class="exam" id="p-exam"></div>
+</div>
+
+<div id="hint">鼠标拖动旋转 · 滚轮缩放 · 点击天体查看信息</div>
+
+<!-- 知识库 -->
+<div id="kb">
+  <div class="box">
+    <button class="close" id="kb-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2>高中地理知识点库</h2>
+    <div class="sub">宇宙中的地球 · 必修一第一章 · 点击关闭返回漫游</div>
+    <div id="kb-list"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* ================= 行星数据（真实天文数据 + 高中考点） ================= */
+const PLANETS = [
+  {key:'sun', name:'太阳', en:'Sun', color:'#f6b93b', size:5, dist:0, day:0, year:0,
+   desc:'太阳是太阳系的中心天体，是一颗恒星。质量占太阳系总质量的99.86%，通过核聚变向外辐射能量。太阳辐射是地球光和热的主要来源，也是人类生产生活所需能源的重要来源（太阳能、化石能源的最终来源）。',
+   exam:'考点：太阳大气层由内向外分为光球层、色球层、日冕层。黑子出现在光球层，耀斑和日珥出现在色球层，太阳风来自日冕层。太阳活动（黑子、耀斑）会扰动地球磁场、电离层，影响无线电短波通信，产生极光。',
+   stats:[['半径','69.6万 km'],['表面温度','约5500 ℃'],['日地距离','1.496亿 km（1AU）'],['核心温度','约1500万 ℃']]},
+  {key:'mercury', name:'水星', en:'Mercury', color:'#9a9a9a', size:.8, dist:11, day:58.6, year:87.97,
+   desc:'距太阳最近的行星，类地行星。表面类似月球，布满环形山，昼夜温差极大（白天约427℃，夜晚约-173℃），几乎没有大气。',
+   exam:'考点：类地行星（水金地火）共性——体积小、密度大、表面温度较高。水星是距离太阳最近的行星，公转周期最短。',
+   stats:[['距日距离','0.39 AU'],['公转周期','87.97 天'],['自转周期','58.6 天'],['卫星数','0']]},
+  {key:'venus', name:'金星', en:'Venus', color:'#e8c779', size:1.1, dist:15, day:243, year:224.7,
+   desc:'类地行星，是夜空中最亮的行星（长庚星/启明星）。拥有浓厚的二氧化碳大气层，温室效应强烈，表面温度约465℃，是太阳系最热的行星。自转方向自东向西（逆向自转）。',
+   exam:'考点：金星是唯一逆向自转的行星；天空中最亮的行星；厚厚的二氧化碳大气导致强烈温室效应。',
+   stats:[['距日距离','0.72 AU'],['公转周期','224.7 天'],['自转周期','243 天（逆向）'],['卫星数','0']]},
+  {key:'earth', name:'地球', en:'Earth', color:'#4d9de0', size:1.15, dist:19.5, day:1, year:365.25,
+   desc:'太阳系中唯一已知存在生命的行星，距日约1.5亿千米。地球与太阳的距离适中（适宜温度）、自转公转周期适中、有液态水和大气层，这些共同构成了生命存在的条件。地球自西向东自转，轴倾斜23°26′。',
+   exam:'考点：地球存在生命的条件——日地距离适中（温度适宜）、质量体积适中（吸引大气）、液态水、安全的宇宙环境、稳定的太阳光照。地球运动：自转产生昼夜交替与时差，公转产生四季与五带。',
+   stats:[['距日距离','1.00 AU'],['公转周期','365.25 天'],['自转周期','23时56分4秒'],['卫星数','1（月球）']]},
+  {key:'mars', name:'火星', en:'Mars', color:'#d1694f', size:.95, dist:25, day:1.03, year:687,
+   desc:'类地行星，因表面富含氧化铁而呈红色，被称为"红色星球"。大气稀薄以二氧化碳为主，有极冠（干冰和水冰）。人类探测火星的热情很高，被认为是未来可能移居的星球。',
+   exam:'考点：火星与地球自然环境相似度最高；公转周期约687天（1.88年）；有四季但季节长度约为地球的两倍。',
+   stats:[['距日距离','1.52 AU'],['公转周期','687 天'],['自转周期','24时37分'],['卫星数','2']]},
+  {key:'jupiter', name:'木星', en:'Jupiter', color:'#d8a06a', size:2.8, dist:34, day:.41, year:11.86,
+   desc:'太阳系最大的行星，巨行星。质量约为其他七大行星总和的2.5倍。表面有著名的大红斑（巨型风暴）。木星拥有最多的卫星（90余颗）。',
+   exam:'考点：巨行星（木土）共性——体积大、密度小、有光环。木星是太阳系体积和质量最大的行星。',
+   stats:[['距日距离','5.20 AU'],['公转周期','11.86 年'],['自转周期','9时56分'],['卫星数','95']]},
+  {key:'saturn', name:'土星', en:'Saturn', color:'#e6cf8e', size:2.4, dist:44, day:.45, year:29.46,
+   desc:'巨行星，以壮观的光环著称，光环由无数冰粒和岩石碎片组成。密度极低，是太阳系中密度最小的行星（比水还小）。',
+   exam:'考点：土星光环由冰粒与岩石碎块构成；密度小于水；巨行星之一。',
+   stats:[['距日距离','9.54 AU'],['公转周期','29.46 年'],['自转周期','10时39分'],['卫星数','146']]},
+  {key:'uranus', name:'天王星', en:'Uranus', color:'#7fd4d9', size:1.6, dist:56, day:.72, year:84.02,
+   desc:'远日行星。自转轴几乎"躺着"公转（轴倾角97.77°），表面呈蓝绿色，是因为大气中的甲烷吸收红光。',
+   exam:'考点：远日行星（天海）共性——距日远、温度低。天王星自转轴倾斜角接近98°，几乎平躺着公转。',
+   stats:[['距日距离','19.20 AU'],['公转周期','84 年'],['自转周期','17时14分'],['卫星数','28']]},
+  {key:'neptune', name:'海王星', en:'Neptune', color:'#5d7fd6', size:1.55, dist:66, day:.67, year:164.8,
+   desc:'距太阳最远的行星，远日行星。表面呈蓝色，风速可达每秒2100千米，是太阳系中风速最快的行星。',
+   exam:'考点：海王星是太阳系最外围的行星；公转周期最长（约164.8年）。',
+   stats:[['距日距离','30.06 AU'],['公转周期','164.8 年'],['自转周期','16时6分'],['卫星数','16']]}
+];
+
+/* ================= 知识库数据 ================= */
+const KNOWLEDGE = [
+  {t:'天体系统层次', tags:['必考','结构'], c:'宇宙中的天体相互吸引、相互绕转，形成天体系统。级别从低到高：地月系 → 太阳系 → 银河系 → 可观测宇宙。地球位于地月系，属于太阳系、银河系中的一颗普通行星。'},
+  {t:'八大行星分类', tags:['必考','记忆'], c:'类地行星（水星、金星、地球、火星）：体积小、密度大、距日近。巨行星（木星、土星）：体积大、密度小、有光环。远日行星（天王星、海王星）：距日远、温度低、有光环。'},
+  {t:'地球存在生命的条件', tags:['高频','简答'], c:'① 外部条件：安全的宇宙环境（大小行星各行其道互不干扰）、稳定的太阳光照。② 自身条件：日地距离适中→适宜温度；质量体积适中→吸引并保存大气；存在液态水。'},
+  {t:'太阳大气层与太阳活动', tags:['必考','识图'], c:'光球层→黑子（周期约11年）；色球层→耀斑、日珥；日冕层→太阳风。太阳活动增强时：扰动电离层→无线电短波通信中断；扰动地球磁场→磁暴；高能带电粒子流→两极极光。'},
+  {t:'地球自转', tags:['必考','计算'], c:'方向自西向东（北极上空看逆时针）。周期：恒星日23时56分4秒（真正周期）。速度：角速度除两极外均为15°/时；线速度由赤道向两极递减（赤道最大，约1670km/h）。自转产生昼夜交替和时差。'},
+  {t:'地球公转与四季', tags:['高频','综合'], c:'方向自西向东。周期：恒星年365日6时9分10秒。近日点1月初（速度快），远日点7月初（速度慢）。黄赤交角23°26′导致太阳直射点在南北回归线之间往返运动→正午太阳高度与昼夜长短变化→四季更替。'},
+  {t:'昼夜长短与正午太阳高度', tags:['高频','规律'], c:'夏至（6月22日前后）：直射北回归线，北半球昼最长、正午太阳高度最大，北极圈内极昼。冬至（12月22日前后）：直射南回归线，北半球昼最短，北极圈内极夜。春分/秋分：直射赤道，全球昼夜等长。'},
+  {t:'五带划分', tags:['基础'], c:'以南北回归线（23°26′）和南北极圈（66°34′）为界划分：热带（有太阳直射现象）、南/北温带（四季分明）、南/北寒带（有极昼极夜现象）。'},
+  {t:'时区与区时', tags:['必考','计算'], c:'地球自转一周24小时，经度每隔15°相差1小时。以0°经线（本初子午线）为中央经线的中时区为基准，向东为东时区、向西为西时区。相邻时区相差1小时，东早西晚。北京位于东八区。'},
+  {t:'国际日界线', tags:['易错'], c:'大致沿180°经线，自西向东越过日界线日期减一天，自东向西越过日期加一天。注意与自然日界线（0时经线）的区别：0时经线向东到180°经线为"今天"范围。'}
+];
+
+/* ================= 场景 ================= */
+const canvas=document.getElementById('scene3d');
+let renderer,scene,camera,controls;
+let sunMesh,planets=[],orbits=[],earthObj,axisHelper;
+let raycaster,pointer,clock=new THREE.Clock();
+let mode='free';
+let timeScale=0.35, animSpeed=1, playing=true;
+let revAngle=0;
+
+function init(){
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.shadowMap.enabled=false;
+
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,2000);
+  camera.position.set(0,42,78);
+  camera.lookAt(0,0,0);
+
+  controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=.06;
+  controls.minDistance=6;controls.maxDistance=220;
+
+  /* 星空背景 */
+  const stars=new THREE.Points(
+    new THREE.BufferGeometry(),
+    new THREE.PointsMaterial({color:0xffffff,size:.35,transparent:true,opacity:.9})
+  );
+  const sp=[];for(let i=0;i<2200;i++){sp.push((Math.random()-.5)*700,(Math.random()-.5)*700,(Math.random()-.5)*700);}
+  stars.geometry.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
+  scene.add(stars);
+
+  /* 太阳 */
+  const sunMat=new THREE.MeshBasicMaterial({color:0xffd27a});
+  sunMesh=new THREE.Mesh(new THREE.SphereGeometry(5,48,48),sunMat);
+  scene.add(sunMesh);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:makeGlow(),blending:THREE.AdditiveBlending,depthWrite:false
+  }));
+  glow.scale.set(26,26,1);sunMesh.add(glow);
+
+  const ambient=new THREE.AmbientLight(0x223344,.9);
+  scene.add(ambient);
+  const sunLight=new THREE.PointLight(0xfff2d8,1.6,300);
+  scene.add(sunLight);
+
+  /* 行星与轨道 */
+  PLANETS.forEach((p,i)=>{
+    if(p.key==='sun')return;
+    const group=new THREE.Group();
+    const mat=new THREE.MeshStandardMaterial({color:p.color,roughness:.85,metalness:.05});
+    const mesh=new THREE.Mesh(new THREE.SphereGeometry(p.size,36,36),mat);
+    group.add(mesh);
+    // 土星环
+    if(p.key==='saturn'){
+      const ring=new THREE.Mesh(
+        new THREE.RingGeometry(p.size*1.35,p.size*2.1,48),
+        new THREE.MeshBasicMaterial({color:0xcbb488,side:THREE.DoubleSide,transparent:true,opacity:.75})
+      );
+      ring.rotation.x=Math.PI/2.4;
+      group.add(ring);
+    }
+    group.position.x=p.dist;
+    scene.add(group);
+
+    const orbit=new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(circlePts(p.dist,96)),
+      new THREE.LineBasicMaterial({color:0x2a4a75,transparent:true,opacity:.55})
+    );
+    scene.add(orbit);
+
+    planets.push({data:p,group,mesh,orbit,angle:Math.random()*Math.PI*2,speed:6.28/p.year/120,
+      selfSpeed:(p.key==='venus'?-1:1)*6.28/Math.max(p.day,1)/(p.day>50?1:20)});
+  });
+
+  /* 地球特殊处理：自转轴倾斜（黄赤交角 23°26′） */
+  const earth=planets.find(x=>x.data.key==='earth');
+  earth.group.rotation.z=23.44*Math.PI/180;
+  earthObj=earth;
+
+  /* 自转轴示意（竖直置于倾斜的 group 内，即显示地球轴方向） */
+  axisHelper=new THREE.Group();
+  const axisMat=new THREE.LineBasicMaterial({color:0xffd166,transparent:true,opacity:.7});
+  const axisGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-2.2,0),new THREE.Vector3(0,2.2,0)]);
+  axisHelper.add(new THREE.Line(axisGeo,axisMat));
+  earth.group.add(axisHelper);
+
+  raycaster=new THREE.Raycaster();
+  pointer=new THREE.Vector2();
+
+  buildPlanetBar();
+  renderer.domElement.addEventListener('click',onClick);
+  renderer.domElement.addEventListener('pointermove',onMove);
+  addEventListener('resize',onResize);
+  animate();
+}
+
+function makeGlow(){
+  const c=document.createElement('canvas');c.width=c.height=256;
+  const x=c.getContext('2d');
+  const g=x.createRadialGradient(128,128,0,128,128,128);
+  g.addColorStop(0,'rgba(255,220,140,1)');
+  g.addColorStop(.3,'rgba(255,180,80,.55)');
+  g.addColorStop(1,'rgba(255,150,50,0)');
+  x.fillStyle=g;x.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(c);
+}
+function circlePts(r,n){
+  const a=[];for(let i=0;i<=n;i++){const t=i/n*Math.PI*2;a.push(new THREE.Vector3(Math.cos(t)*r,0,Math.sin(t)*r));}
+  return a;
+}
+
+/* ================= UI ================= */
+function buildPlanetBar(){
+  const bar=document.getElementById('planets');
+  bar.innerHTML='';
+  PLANETS.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='pbtn';
+    b.innerHTML='<div class="dot" style="background:'+p.color+';box-shadow:inset -4px -4px 8px rgba(0,0,0,.5),0 0 10px '+p.color+'55"></div><span>'+p.name+'</span>';
+    b.addEventListener('click',()=>flyTo(p.key));
+    bar.appendChild(b);
+  });
+}
+
+function showPanel(p){
+  document.getElementById('p-name').innerHTML='<span class="pdot" style="background:'+p.color+'"></span>'+p.name;
+  document.getElementById('p-en').textContent=p.en;
+  document.getElementById('p-stat').innerHTML=p.stats.map(s=>'<div><b>'+s[0]+'</b><span>'+s[1]+'</span></div>').join('');
+  document.getElementById('p-desc').textContent=p.desc;
+  document.getElementById('p-exam').innerHTML='<b>考点提示：</b>'+p.exam;
+  document.getElementById('panel').classList.add('open');
+}
+document.getElementById('panel-close').addEventListener('click',()=>document.getElementById('panel').classList.remove('open'));
+
+let hovered=null;
+function onMove(e){
+  pointer.x=(e.clientX/innerWidth)*2-1;
+  pointer.y=-(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera(pointer,camera);
+  const all=[sunMesh,...planets.map(p=>p.mesh)];
+  const hits=raycaster.intersectObjects(all);
+  if(hovered){renderer.domElement.style.cursor='default';hovered=null;}
+  if(hits.length){hovered=hits[0].object;renderer.domElement.style.cursor='pointer';}
+}
+function onClick(e){
+  pointer.x=(e.clientX/innerWidth)*2-1;
+  pointer.y=-(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera(pointer,camera);
+  const all=[sunMesh,...planets.map(p=>p.mesh)];
+  const hits=raycaster.intersectObjects(all);
+  if(hits.length){
+    const obj=hits[0].object;
+    if(obj===sunMesh){showPanel(PLANETS[0]);controls.target.set(0,0,0);}
+    else{
+      const hit=planets.find(p=>p.mesh===obj);
+      if(hit){showPanel(hit.data);controls.target.copy(hit.group.position);}
+    }
+  } else if(e.target===renderer.domElement){
+    document.getElementById('panel').classList.remove('open');
+  }
+}
+function flyTo(key){
+  if(mode!=='free')setMode('free');
+  const p=key==='sun'?{group:null,data:PLANETS[0]}:planets.find(x=>x.data.key===key);
+  if(p&&p.data.key==='sun'){showPanel(PLANETS[0]);controls.target.set(0,0,0);camera.position.set(0,14,30);return;}
+  if(p){showPanel(p.data);controls.target.copy(p.group.position);camera.position.set(p.group.position.x+12,10,p.group.position.z+12);}
+}
+
+/* ================= 模式 ================= */
+let rotateBoost=6;
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  const bar=document.getElementById('teachbar');
+  const hint=document.getElementById('hint');
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('kb').classList.remove('open');
+  bar.classList.remove('show');
+  timeScale=.35;revAngle=0;rotateBoost=6;playing=true;
+  document.getElementById('tch-play').textContent='暂停';
+  if(m==='free'){
+    hint.textContent='鼠标拖动旋转 · 滚轮缩放 · 点击天体查看信息';
+    controls.target.set(0,0,0);camera.position.set(0,42,78);
+  } else if(m==='rotate'){
+    hint.textContent='地球自西向东自转 → 昼夜交替 · 拖动滑块调速';
+    timeScale=0;rotateBoost=6;
+    flyToEarth();
+    document.getElementById('tch-lbl').textContent='自转速度 ×6（演示加速）';
+    document.getElementById('tch-slider').value=30;
+    bar.classList.add('show');
+  } else if(m==='revolution'){
+    hint.textContent='拖动下方滑块观察太阳直射点移动 → 四季更替';
+    timeScale=0;
+    camera.position.set(-70,26,46);controls.target.set(0,0,0);
+    document.getElementById('tch-lbl').textContent='太阳直射点：赤道（春分 3月21日）';
+    document.getElementById('tch-slider').value=0;
+    bar.classList.add('show');
+  } else if(m==='timezone'){
+    hint.textContent='经度每隔15°相差1小时 · 北京位于东八区 · 拖动滑块调速';
+    timeScale=0;rotateBoost=1;
+    flyToEarth();
+    document.getElementById('tch-lbl').textContent='自转速度 ×1（1圈=24小时）';
+    document.getElementById('tch-slider').value=0;
+    bar.classList.add('show');
+  } else if(m==='kb'){
+    document.getElementById('kb').classList.add('open');
+    hint.textContent='高中地理知识点库 · 点击关闭返回';
+  }
+}
+function flyToEarth(){
+  const e=earthObj;
+  const p=e.group.position;
+  controls.target.copy(p);
+  camera.position.set(p.x+9,p.y+3,p.z+9);
+}
+document.querySelectorAll('.mode-btn').forEach(b=>{
+  b.addEventListener('click',()=>setMode(b.dataset.mode));
+});
+document.getElementById('kb-close').addEventListener('click',()=>{document.getElementById('kb').classList.remove('open');setMode('free');});
+document.getElementById('tch-play').addEventListener('click',()=>{playing=!playing;document.getElementById('tch-play').textContent=playing?'暂停':'播放';});
+document.getElementById('tch-reset').addEventListener('click',()=>{revAngle=0;document.getElementById('tch-slider').value=0;updateRevLabel();});
+document.getElementById('tch-slider').addEventListener('input',e=>{
+  const v=+e.target.value;
+  if(mode==='revolution'){revAngle=v/100*Math.PI*2;updateRevLabel();}
+  if(mode==='rotate'){rotateBoost=1+v/100*19;document.getElementById('tch-lbl').textContent='自转速度 ×'+Math.round(rotateBoost*10)/10+'（演示加速）';}
+  if(mode==='timezone'){rotateBoost=1+v/100*19;document.getElementById('tch-lbl').textContent='自转速度 ×'+Math.round(rotateBoost*10)/10+'（1圈=24小时）';}
+});
+function updateRevLabel(){
+  const deg=(revAngle*180/Math.PI)%360;
+  const pos=(deg+360)%360;
+  let label;
+  if(pos<0.5||pos>359.5)label='太阳直射点：赤道（春分 3月21日）';
+  else if(pos>89.5&&pos<90.5)label='太阳直射点：北回归线（夏至 6月22日）';
+  else if(pos>179.5&&pos<180.5)label='太阳直射点：赤道（秋分 9月23日）';
+  else if(pos>269.5&&pos<270.5)label='太阳直射点：南回归线（冬至 12月22日）';
+  else if(pos<90)label='太阳直射点：北半球（春分→夏至）';
+  else if(pos<180)label='太阳直射点：北半球（夏至→秋分）';
+  else if(pos<270)label='太阳直射点：南半球（秋分→冬至）';
+  else label='太阳直射点：南半球（冬至→春分）';
+  document.getElementById('tch-lbl').textContent=label;
+}
+function buildKB(){
+  const box=document.getElementById('kb-list');
+  box.innerHTML=KNOWLEDGE.map(k=>'<div class="kcard"><h4>'+k.t+'</h4><p>'+k.c+'</p>'+k.tags.map(t=>'<span class="tag">'+t+'</span>').join('')+'</div>').join('');
+}
+buildKB();
+
+/* ================= 动画 ================= */
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),.05);
+
+  planets.forEach(p=>{
+    p.angle+=dt*p.speed*timeScale;
+    p.group.position.x=Math.cos(p.angle)*p.dist;
+    p.group.position.z=Math.sin(p.angle)*p.dist;
+    // 自转（rotate/timezone 模式用滑块倍率加速）
+    const boost=(mode==='rotate'||mode==='timezone')?rotateBoost:1;
+    p.mesh.rotation.y+=dt*p.selfSpeed*boost*(playing?1:0);
+  });
+
+  // 公转模式：地球沿轨道动画
+  if(mode==='revolution'){
+    const e=earthObj;
+    if(playing){revAngle+=dt*.02;document.getElementById('tch-slider').value=(revAngle/(Math.PI*2)*100)%100;}
+    updateRevLabel();
+    e.angle=revAngle;
+    e.group.position.x=Math.cos(revAngle)*e.dist;
+    e.group.position.z=Math.sin(revAngle)*e.dist;
+  }
+
+  sunMesh.rotation.y+=dt*.05;
+  controls.update();
+  renderer.render(scene,camera);
+}
+function onResize(){
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+}
+
+/* 加载完成 */
+init();
+setTimeout(()=>document.getElementById('loading').classList.add('hide'),800);
+</script>
+</body>
+</html>
